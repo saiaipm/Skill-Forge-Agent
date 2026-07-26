@@ -34,5 +34,3 @@ output/
 # render. The 3MB source .docx cannot be previewed or diffed.
 *.docx
 
-# Local working notes, not part of the project's public story.
-NEXT-STEPS.md
