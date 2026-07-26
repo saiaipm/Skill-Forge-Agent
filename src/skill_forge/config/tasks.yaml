@@ -1,0 +1,262 @@
+# Task briefs. Placeholders in {braces} are filled from the RoadmapRequest.
+#
+# Note on redundancy: several rules here are also enforced in schemas.py. That
+# duplication is deliberate. The schema is the guarantee; the prompt is what
+# stops the model producing a violation in the first place. Stating a rule only
+# in the schema means paying for a full generation before discovering it broke.
+
+design_curriculum:
+  description: >
+    Design a complete Zero-to-Hero learning roadmap for this skill:
+
+        TOPIC:            {topic}
+        LEARNER LEVEL:    {user_experience_level}
+        TIME AVAILABLE:   {hours_per_week} hours per week
+
+    Produce exactly four phases, in this order:
+
+        phase_1  Foundations   — absolute fundamentals, assumes nothing
+        phase_2  Building      — intermediate working competence
+        phase_3  Professional  — advanced, production-grade practice
+        phase_4  Mastery       — specialisation and depth
+
+    Requirements for every phase:
+      - phase_id must be exactly "phase_1", "phase_2", "phase_3", "phase_4"
+      - 5 to 15 core_concepts, each naming a specific idea, technique, or tool
+        a learner could look up and study on its own.
+      - a milestone_project the learner builds to prove the phase landed. Give
+        it a concrete title and a description of at least 40 characters saying
+        what gets built and what it demonstrates.
+      - a summary of at least 60 characters explaining what changes in the
+        learner's capability during this phase. Do not restate the phase name.
+        "Develop intermediate competence in Git" is a rejected non-answer.
+      - estimated_hours grounded in how long the material genuinely takes, not
+        a round number chosen for symmetry.
+
+    On naming concepts — this is where roadmaps usually fail. A concept must
+    survive the test "could someone search for exactly this and find something
+    to study?"
+
+        REJECTED                              ACCEPTED
+        Advanced Git branching strategies  ->  Trunk-based development with
+                                               short-lived feature branches
+        Understanding Git's security       ->  Signing commits with GPG and
+        features                               verifying signatures
+        Git internals                      ->  Git object model: blobs, trees,
+                                               commits and SHA-1 addressing
+        Basic networking concepts          ->  TCP three-way handshake and
+                                               port binding
+
+    Constructions of the form "Advanced X strategies", "Understanding Y's
+    features", "Basic Z concepts", or anything trailing "and more" will be
+    rejected and you will be asked to redo the work.
+
+    Set target_domain to the specific technology being learned — "Git", not
+    "Software Development". Downstream agents build search queries from this
+    field, and a broad domain produces irrelevant results.
+
+    Even when the learner reports prior experience, do not delete foundational
+    material. Compress it if warranted, but a learner who self-assesses as
+    intermediate is frequently missing a fundamental, and a roadmap that skips
+    it inherits the gap.
+
+    Arithmetic, which is checked: set weekly_hours to {hours_per_week}. Sum the
+    estimated_hours of all four phases, divide by {hours_per_week}, round up,
+    and put that in total_estimated_weeks. A mismatch is rejected. Worked
+    example: phases of 20+30+40+30 = 120 hours at 10 hrs/week is 12 weeks.
+  expected_output: >
+    A single Roadmap object with roadmap_title, target_domain, weekly_hours,
+    total_estimated_weeks, and exactly four phases as specified. No commentary
+    outside the object.
+
+curate_courses:
+  description: >
+    Find courses and certifications for every phase of this roadmap.
+
+        DOMAIN: {target_domain}
+
+        PHASES:
+    {phase_brief}
+
+    For EACH of the four phases you must return:
+
+      - at least one FREE course. Which sources have free material depends
+        heavily on the subject, so pick from the right column:
+
+          Software / infrastructure   freeCodeCamp, MIT OpenCourseWare,
+                                      The Odin Project, Kubernetes.io,
+                                      official language and vendor docs
+          AI / data / ML              DeepLearning.AI short courses, Google
+                                      Cloud Skills Boost, Kaggle Learn,
+                                      Hugging Face courses, fast.ai
+          Business / product / design Google Digital Garage, HubSpot Academy,
+                                      Meta Blueprint, Coursera audit tracks,
+                                      edX audit tracks, Interaction Design
+                                      Foundation free articles
+
+        Any subject can also use Coursera and edX audit tracks, which are free
+        to study without paying for the certificate. Set cost_type to "Free"
+        and leave price_range empty.
+
+      - at least one PAID course from a reputable platform: Udemy, Coursera
+        Specializations, Pluralsight, O'Reilly, LinkedIn Learning, Maven,
+        Reforge, A Cloud Guru. Set cost_type to "Paid" and give a price_range
+        such as "$15-$25", "Subscription", or "$49/month". A paid course
+        without a price is rejected.
+
+    A URL may appear only ONCE in the entire catalogue. Never list the same link
+    as both free and paid, and never reuse a link across phases. If you cannot
+    find a distinct free course for a phase, search an audit track on Coursera
+    or edX for that phase's topic — those exist for almost every subject — and
+    do not fall back on repeating a paid link.
+
+    Search strategy — read this carefully, it is where curation usually fails.
+
+    Write SHORT queries of three to six words. Do NOT concatenate every concept
+    in a phase into one long query; that returns noise rather than courses.
+    Pick the one or two ideas that best characterise the phase.
+
+        BAD   free course Git init and the working tree and Staging area and
+              the index and Commits and SHA-1 addressing and git log
+        GOOD  freeCodeCamp Git tutorial beginners
+        GOOD  Coursera Git version control course
+        GOOD  Udemy advanced Git rebase course
+
+    Name the platform in the query. Searching "free Git course" returns blog
+    posts; searching "edX Git course" returns courses. Run two searches per
+    phase — one naming a free platform, one naming a paid platform.
+
+    YouTube links are NOT courses. A video is a video; it belongs to the media
+    resources, not here, and returning one will be rejected. If a search returns
+    mostly YouTube, search again naming an actual learning platform.
+
+    Never invent a price. If you cannot determine a course's price, say
+    "Subscription" or "See site" rather than guessing a figure.
+
+    On certifications — accuracy matters more than coverage:
+
+      - Only real, vendor- or body-issued credentials count. AWS Certified
+        Solutions Architect, CKA, CompTIA Security+, PMI-ACP, Microsoft Azure
+        Fundamentals. A Udemy or Coursera completion certificate is NOT a
+        certification and must never be listed as one.
+      - Attach each certification to the phase where a learner would realistically
+        be ready to sit it, usually phase_3 or phase_4. Not every phase needs one.
+      - Every certification needs a working official_url on the issuing body's
+        own domain.
+      - If the topic genuinely has no recognised credential — many do not — return
+        ONE entry with cert_name "N/A", issuing_body "N/A", relevance "N/A", a
+        real phase_id, a justification explaining why, and NO official_url.
+        All three N/A fields together or none of them; a half-N/A entry is
+        rejected. Inventing a plausible-sounding certification is the worst
+        possible outcome here.
+      - Frameworks, standards, and guides are NOT certifications. The NIST AI
+        Risk Management Framework, the OWASP Top 10, and similar documents are
+        valuable reading but nobody is certified in them. Leave them out; the
+        media agent covers that ground.
+
+    Before you finish, call verify_links with every URL you intend to return.
+    Replace anything reported DEAD. Results marked UNVERIFIED were blocked by
+    bot protection rather than found missing — keep those if the source is
+    reputable.
+
+    Use phase_id values exactly as given above. Do not renumber, skip, or invent
+    phases; downstream assembly matches on these IDs and a mismatch discards
+    your work.
+  expected_output: >
+    A CourseCatalog object with one curated_courses entry per phase (each with
+    at least one free and one paid course) and a certifications list. No
+    commentary outside the object.
+
+mine_media:
+  description: >
+    Find supplementary learning material for every phase of this roadmap.
+
+        DOMAIN: {target_domain}
+
+        PHASES:
+    {phase_brief}
+
+    For EACH phase, gather up to five items in each of these categories — fewer
+    is fine and better than padding:
+
+      - articles_and_blogs: technical writing that teaches something specific.
+        Official engineering blogs, freeCodeCamp News, Dev.to, primary-source
+        write-ups. Each needs a key_takeaway of one sentence saying what the
+        reader gains. Avoid listicles and "top 10 tools" filler.
+      - youtube_content: use the video_search tool. Prefer established channels
+        and official ones. Set format to "Playlist", "Full Course", or
+        "Specific Video". Include duration when the search returns it.
+      - interactive_or_docs: official documentation, GitHub repositories, and
+        interactive sandboxes. Set type to "Documentation", "GitHub Repo", or
+        "Interactive Sandbox". Official docs for the technology belong in
+        phase_1 at minimum.
+
+    Recency matters and cannot be checked automatically, so it is on you. For
+    fast-moving technology prefer material from the last two to three years.
+    Video search results include a published date — use it. Where a resource is
+    older but canonical (a language spec, a foundational paper, a classic talk),
+    keep it and say so in the key_takeaway.
+
+    Search strategy: write SHORT queries of three to six words. Do NOT paste a
+    phase's entire concept list into one query — that returns noise. Pick the
+    one or two concepts that best characterise the phase and search for those.
+
+        BAD   Git object model blobs trees commits SHA-1 packfiles storage
+              optimization git cat-file git ls-tree advanced branching models
+        GOOD  Git internals object model explained
+        GOOD  Git rebase tutorial
+
+    Run one web_search and one video_search per phase. If a phase needs two
+    angles, run two short queries rather than one long one.
+
+    Before you finish, call verify_links with every URL you intend to return.
+    Replace anything DEAD. UNVERIFIED means the site blocked the checker, not
+    that the link is broken — keep those from reputable sources.
+
+    Use phase_id values exactly as given above. Every phase needs at least one
+    resource in at least one category.
+  expected_output: >
+    A MediaLibrary object with one media_resources entry per phase. No
+    commentary outside the object.
+
+synthesise_document:
+  description: >
+    Write the two prose sections that open a learning roadmap. Everything else
+    in the document — every course, certification, video, article, and link —
+    is rendered directly from structured data and is not your responsibility.
+    Do not reproduce, summarise, or list any of it.
+
+        ROADMAP:      {roadmap_title}
+        DOMAIN:       {target_domain}
+        COMMITMENT:   {weekly_hours} hours per week for {total_weeks} weeks
+                      ({total_hours} hours total)
+
+        PHASES:
+    {phase_outline}
+
+        AVAILABLE:    {course_count} courses ({free_count} free),
+                      {media_count} supplementary resources,
+                      {cert_count} certifications
+
+    Produce exactly two fields.
+
+    executive_summary — three to five sentences. State what someone who
+    completes this roadmap will be able to do, the arc the four phases follow,
+    and who it suits. Concrete capability, not encouragement. Write "you will be
+    able to resolve merge conflicts and recover lost commits from the reflog",
+    not "you will master the power of version control".
+
+    getting_started — four to six short numbered steps telling the learner what
+    to do in their first session. Reference phase 1 by name and its milestone
+    project. Include the practical setup that phase 1 assumes. The last step
+    should say how to know they are ready to move to phase 2.
+
+    Write in the second person. No headings inside either field; the document
+    supplies those. No markdown bold or bullets — plain sentences and, for
+    getting_started, numbered lines.
+
+    Banned openings, because they say nothing: "Embark on", "Dive into",
+    "Unlock", "In today's fast-paced world", "Whether you are a beginner or".
+  expected_output: >
+    A DocumentPreamble object with executive_summary and getting_started. No
+    commentary outside the object.

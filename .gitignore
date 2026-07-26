@@ -1,0 +1,38 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets — never commit real keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# CrewAI runtime artifacts
+db/
+*.sqlite3
+.crewai/
+
+# Generated roadmaps (keep the curated demo under docs/)
+output/
+!output/.gitkeep
+
+# OS / editor noise
+.DS_Store
+.vscode/
+.idea/
+
+# The design spec lives in the repo as docs/design-spec.md, which GitHub can
+# render. The 3MB source .docx cannot be previewed or diffed.
+*.docx
+
+# Local working notes, not part of the project's public story.
+NEXT-STEPS.md
