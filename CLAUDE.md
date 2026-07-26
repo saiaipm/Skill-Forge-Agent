@@ -90,8 +90,22 @@ rule with no structural enforcement.
 ## Possible next steps
 
 - A GitHub Actions workflow running `pytest`.
-- A Streamlit front end. `crew.generate_roadmap(request) -> RunReport` is
-  already the right boundary. The real design problem is cost exposure on a
-  public URL; a bring-your-own-key form solves it.
+- A Streamlit front end with a bring-your-own-key form (in progress).
+  `crew.generate_roadmap(request) -> RunReport` is already the right
+  integration boundary. Two things to fix before the UI exists rather than
+  after:
+
+  **Keys must stop coming from the environment.** `llm.load_settings()` and
+  `tools/serper.py::_api_key()` both read `os.getenv`, and environment is
+  process-global. With two people using a hosted app at once, one visitor's
+  key would serve the other's request. Thread keys through explicitly —
+  `load_settings(api_key=...)`, `SerperWebSearchTool(api_key=...)` — before
+  anything multi-user exists.
+
+  **A run blocks for two to four minutes with no progress signal.** Timings
+  are only recorded once each stage completes, so a naive `st.spinner` sits
+  frozen. CrewAI exposes an event bus (`crewai.events.event_bus`) that could
+  emit per-agent progress; alternatively report at stage boundaries, which is
+  cruder but nearly free.
 - Consolidating the two GitHub accounts, if this is meant to read as one
   portfolio.
